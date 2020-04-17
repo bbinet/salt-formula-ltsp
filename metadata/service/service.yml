@@ -1,6 +1,0 @@
-applications:
-- ltsp
-parameters:
-  ltsp:
-    service:
-      enabled: true

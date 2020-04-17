@@ -1,0 +1,20 @@
+applications:
+- linux.system.repo
+- ltsp
+parameters:
+  linux:
+    system:
+      enabled: true
+      repo:
+        ltsp:
+          source: deb http://ppa.launchpad.net/ltsp/ppa/ubuntu focal main
+          key_url: https://ltsp.org/misc/ltsp_ubuntu_ppa.gpg
+          pin:
+            - pin: release o=LP-PPA-ltsp
+              priority: 900
+              package: ltsp epoptes
+  ltsp:
+    service:
+      enabled: true
+      running: true
+      multiarch: false

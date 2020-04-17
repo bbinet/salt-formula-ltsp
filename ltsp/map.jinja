@@ -2,8 +2,23 @@
 {%- load_yaml as base_defaults %}
 
 Debian:
+
   pkgs:
   - ltsp
+  - dnsmasq
+  - nfs-kernel-server
+  - squashfs-tools
+  - ethtool
+  - net-tools
+  - python3-dbus
+
+  pkgs_multiarch:
+  - qemu-user-static
+  - binfmt-support
+
+  multiarch: false
+  basedir: /srv/ltsp
+  tftpdir: /srv/tftp
 
 {%- endload %}
 
