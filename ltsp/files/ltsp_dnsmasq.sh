@@ -6,6 +6,12 @@
 # This file is managed by SaltStack
 #
 
+# restart ltsp network interface to be sure it is configured
+# (and unmanaged by networkmanager)
+ifdown {{ service.iface }}
+ifup {{ service.iface }}
+
+# start dnsmasq
 /usr/sbin/dnsmasq \
     --enable-tftp \
     --tftp-root={{ cfg.tftp_root }} \
