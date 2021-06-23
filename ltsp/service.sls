@@ -12,14 +12,19 @@ ltsp_pkgs:
 {%- endif %}
 
 {%- if service.multiarch and not grains.get('noservices') %}
+add_i386_architecture:
+  cmd.run:
+    - name: dpkg --add-architecture i386 && apt-get update
+    - unless: dpkg --print-foreign-architectures | grep -q i386
 ltsp_pkgs_multiarch:
   pkg.installed:
     - pkgs: {{ service.pkgs_multiarch }}
-{%- if salt['pillar.get']('linux:system:repo', {})|length > 0 and salt['pillar.get']('linux:system:enabled', False) %}
     - require:
+      - cmd: add_i386_architecture
+{%- if salt['pillar.get']('linux:system:repo', {})|length > 0 and salt['pillar.get']('linux:system:enabled', False) %}
       - sls: linux.system.repo
 {%- endif %}
-{%- if 'qemu-user-static' in service.pkgs_multiarch and grains.get('virtual_subtype') == 'Docker' %}
+{%- if 'qemu-user-static:i386' in service.pkgs_multiarch and grains.get('virtual_subtype') == 'Docker' %}
 fix_qemu-user-static_postinst:
   cmd.run:
     - name: >
