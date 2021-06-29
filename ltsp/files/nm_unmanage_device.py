@@ -21,7 +21,8 @@ if not os.access(DBUS_SOCKET_PATH, os.R_OK and os.W_OK):
 
 import dbus
 
-os.environ["DBUS_SYSTEM_BUS_ADDRESS"] = "unix:path=%s" % DBUS_SOCKET_PATH
+if os.path.exists(DBUS_SOCKET_PATH):
+    os.environ["DBUS_SYSTEM_BUS_ADDRESS"] = "unix:path=%s" % DBUS_SOCKET_PATH
 
 iface = sys.argv[1]
 bus = dbus.SystemBus()

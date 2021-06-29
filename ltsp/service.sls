@@ -4,8 +4,10 @@
 ltsp_pkgs:
   pkg.installed:
     - pkgs: {{ service.pkgs }}
+{%- if salt['pillar.get']('linux:network:enabled', False) and salt['pillar.get']('linux:network:interface:%s:enabled' % service.iface, False) %}
     - require_in:
       - network: linux_interface_{{ service.iface }}
+{%- endif %}
 {%- if salt['pillar.get']('linux:system:repo', {})|length > 0 and salt['pillar.get']('linux:system:enabled', False) %}
     - require:
       - sls: linux.system.repo
@@ -25,6 +27,13 @@ ltsp_pkgs_multiarch:
       - sls: linux.system.repo
 {%- endif %}
 {%- if 'qemu-user-static:i386' in service.pkgs_multiarch and grains.get('virtual_subtype') == 'Docker' %}
+{# FIXME: Investigate if we should extract only qemu-arm-static from i386 qemu-user-static deb 
+wget -O /tmp/qemu-user-static_i386.deb "$(apt-get install --reinstall --print-uris -qq qemu-user-static | cut -d"'" -f2 | sed "s/amd64/i386/")"
+dpkg --fsys-tarfile /tmp/qemu-user-static_i386.deb | tar xOf - ./usr/bin/qemu-arm-static > /path/to/qemu-arm-static
+chmod a+x /path/to/qemu-arm-static
+echo ":sbuild-arm:M::\x7f\x45\x4c\x46\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:$(realpath "/path/to/qemu-arm-static"):OCF" > /proc/sys/fs/binfmt_misc/register
+# see: https://github.com/RPi-Distro/pi-gen/issues/271#issuecomment-773368420
+#}
 fix_qemu-user-static_postinst:
   cmd.run:
     - name: >
@@ -36,12 +45,14 @@ fix_qemu-user-static_postinst:
 {%- endif %}
 {%- endif %}
 
+{%- if salt['pillar.get']('linux:network:enabled', False) and salt['pillar.get']('linux:network:interface:%s:enabled' % service.iface, False) %}
 /usr/local/bin/nm_unmanage_device.py:
   file.managed:
     - source: salt://ltsp/files/nm_unmanage_device.py
     - mode: 755
     - require_in:
       - network: linux_interface_{{ service.iface }}
+{%- endif %}
 
 /etc/ltsp/ltsp.conf:
   file.managed:
@@ -86,6 +97,35 @@ ltsp-initrd:
       - file: {{ service.tftpdir }}/ltsp
     - watch:
       - file: /etc/ltsp/ltsp.conf
+
+{%- if service.pigen.get('enabled') %}
+pigen_pkgs:
+  pkg.installed:
+    - pkgs: {{ service.pkgs_pigen }}
+{%- if salt['pillar.get']('linux:system:repo', {})|length > 0 and salt['pillar.get']('linux:system:enabled', False) %}
+    - require:
+      - sls: linux.system.repo
+{%- endif %}
+pigen-repo:
+  git.latest:
+    - name: {{ service.pigen.repository }}
+    - target: {{ service.pigen.path }}
+    - rev: {{ service.pigen.revision|default(service.pigen.branch) }}
+    - branch: {{ service.pigen.branch|default(service.pigen.revision) }}
+    - force_fetch: {{ service.pigen.get("force_fetch", False) }}
+    - force_reset: {{ service.pigen.get("force_reset", False) }}
+    - identity: {{ grains['root'] }}/.ssh/id_rsa #=> can't use grains['root'] here
+touch_{{ service.pigen.path }}/config:
+  file.touch:
+    - name: {{ service.pigen.path }}/config
+keyvalue_{{ service.pigen.path }}/config:
+  file.keyvalue:
+    - name: {{ service.pigen.path }}/config
+    - key_values: {{ service.pigen.config|json }}
+    - append_if_not_found: true
+    - require:
+      - file: touch_{{ service.pigen.path }}/config
+{%- endif %}
 
 {%- for mac, chroot in service.get('mac', {}).items() %}
 {{ service.tftpdir }}/{{ mac | lower }}:
