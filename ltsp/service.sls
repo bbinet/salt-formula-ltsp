@@ -228,8 +228,38 @@ ltsp-image:
     - require_in:
       - file: {{ service.tftpdir }}
 {%- endfor %}
-
+{%- if "cmdline.txt" not in chrootcfg.get('boot_files', {}) %}
+{{ service.tftpdir }}/ltsp/{{ chroot }}/cmdline.txt:
+  file.managed:
+    - contents: >-
+        ip=dhcp
+        root=/dev/nfs
+        nfsroot=192.168.67.1:{{ service.basedir }}/{{ chroot }},vers=3,tcp,nolock
+        init=/usr/share/ltsp/client/init/init
+        ltsp.image=images/{{ chroot }}.img
+        console=serial0,115200
+        console=tty1
+        elevator=deadline
+        fsck.repair=yes
+        rootwait
+        quiet
+        splash
+        plymouth.ignore-serial-consoles
+        modprobe.blacklist=bcm2835_v4l2
 {%- endif %}
+
+/etc/exports.d/ltsp-{{ chroot }}.exports:
+  file.managed:
+    - contents: "{{ service.basedir }}/{{ chroot }}  *(ro,async,crossmnt,no_subtree_check,no_root_squash,insecure)"
+{%- else %}
+/etc/exports.d/ltsp-{{ chroot }}.exports:
+  file.absent
+{%- endif %}
+  cmd.run:
+    - name: exportfs -ra
+    - onchanges:
+      - file: /etc/exports.d/ltsp-{{ chroot }}.exports
+
 {%- endfor %}
 
 /usr/local/bin/ltsp_dnsmasq.sh:
