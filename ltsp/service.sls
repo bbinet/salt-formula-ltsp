@@ -98,7 +98,7 @@ ltsp-initrd:
     - watch:
       - file: /etc/ltsp/ltsp.conf
 
-{%- if service.pigen.get('enabled') %}
+{%- if service.pigen is defined and service.pigen.get('enabled') %}
 pigen_pkgs:
   pkg.installed:
     - pkgs: {{ service.pkgs_pigen }}
@@ -141,6 +141,11 @@ keyvalue_{{ service.pigen.path }}/config:
 {%- for chroot, chrootcfg in service.get('chroot', {}).items() %}
 {%- if service.chroot[chroot].get('enabled') %}
 
+chroot_must_not_be_empty:
+  test.fail_without_changes:
+    - name: "Chroot {{ chrootcfg.path }} must not be empty"
+    - unless: ls {{ chrootcfg.path }}/*
+
 {{ service.basedir }}/{{ chroot }}:
   file.symlink:
     - target: {{ chrootcfg.path }}
@@ -157,6 +162,7 @@ ltsp-image:
     - require:
       - file: {{ service.basedir }}/{{ chroot }}
       - file: {{ service.basedir }}/images
+      - test: chroot_must_not_be_empty
 
 {{ service.tftpdir }}/ltsp/{{ chroot }}:
   file.copy:
@@ -166,6 +172,7 @@ ltsp-image:
 {%- endif %}
     - require:
       - file: {{ service.tftpdir }}/ltsp
+      - test: chroot_must_not_be_empty
     - require_in:
       - file: {{ service.tftpdir }}
 {{ service.tftpdir }}/ltsp/{{ chroot }}/ltsp.img:
