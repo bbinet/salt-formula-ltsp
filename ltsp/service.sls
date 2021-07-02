@@ -146,6 +146,21 @@ chroot_must_not_be_empty:
     - name: "Chroot {{ chrootcfg.path }} must not be empty"
     - unless: ls {{ chrootcfg.path }}/*
 
+ltsp_25-ro-root_replace_tftpdir:
+  file.replace:
+    - name: {{ chrootcfg.path }}/usr/share/ltsp/client/init/25-ro-root.sh
+    - pattern: /srv/tftp
+    - repl: {{ service.tftpdir }}
+    - require:
+      - test: chroot_must_not_be_empty
+ltsp_25-ro-root_replace_basedir:
+  file.replace:
+    - name: {{ chrootcfg.path }}/usr/share/ltsp/client/init/25-ro-root.sh
+    - pattern: /srv/ltsp
+    - repl: {{ service.basedir }}
+    - require:
+      - test: chroot_must_not_be_empty
+
 {{ service.basedir }}/{{ chroot }}:
   file.symlink:
     - target: {{ chrootcfg.path }}
@@ -163,6 +178,8 @@ ltsp-image:
       - file: {{ service.basedir }}/{{ chroot }}
       - file: {{ service.basedir }}/images
       - test: chroot_must_not_be_empty
+      - file: ltsp_25-ro-root_replace_tftpdir
+      - file: ltsp_25-ro-root_replace_basedir
 
 {{ service.tftpdir }}/ltsp/{{ chroot }}:
   file.copy:
