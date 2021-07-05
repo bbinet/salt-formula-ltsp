@@ -139,7 +139,7 @@ keyvalue_{{ service.pigen.path }}/config:
 {%- endfor %}
 
 {%- for chroot, chrootcfg in service.get('chroot', {}).items() %}
-{%- if service.chroot[chroot].get('enabled') %}
+{%- if service.chroot[chroot].get('enabled') and not grains.get('noservices') %}
 
 chroot_must_not_be_empty:
   test.fail_without_changes:
